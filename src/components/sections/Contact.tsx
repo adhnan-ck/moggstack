@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
-import { useState } from "react";
 import { AuroraText } from "../ui/auroratext";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,8 +15,24 @@ const Contact = () => {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+
+  // Check if device is mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   useEffect(() => {
-    if (sectionRef.current && titleRef.current && contentRef.current) {
+    // Skip animations on mobile to prevent crashes
+    if (isMobile || !sectionRef.current || !titleRef.current || !contentRef.current) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
       // Title animation
       gsap.fromTo(titleRef.current, 
         { opacity: 0, y: 50 },
@@ -29,13 +44,12 @@ const Contact = () => {
           scrollTrigger: {
             trigger: titleRef.current,
             start: "top 80%",
-            once: true
           }
         }
       );
 
       // Content animation
-      gsap.fromTo([contentRef.current.children],
+      gsap.fromTo(contentRef.current.children,
         { opacity: 0, y: 30 },
         {
           opacity: 1,
@@ -49,38 +63,53 @@ const Contact = () => {
           }
         }
       );
+    }, sectionRef);
+
+    // Cleanup function
+    return () => {
+      ctx.revert(); // This will kill all animations and ScrollTriggers created in this context
+    };
+  }, [isMobile]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Validate form data
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.subject || !formData.message) {
+      alert('Please fill in all fields');
+      return;
     }
-  }, []);
 
-
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    subject: "",
-    message: "",
-  })
-
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-
-    const phoneNumber = "919995338177" // your WhatsApp number
-    const text = `📩 New Inquiry
+    try {
+      const phoneNumber = "919995338177";
+      const text = `📩 New Inquiry
 -----------------
 👤 Name: ${formData.firstName} ${formData.lastName}
 📧 Email: ${formData.email}
 📝 Subject: ${formData.subject}
-💬 Message: ${formData.message}`
+💬 Message: ${formData.message}`;
 
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(text)}`
-    window.open(url, "_blank") // Opens WhatsApp
-  }
-
+      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(text)}`;
+      window.open(url, "_blank");
+      
+      // Reset form after successful submission
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error) {
+      console.error('Error opening WhatsApp:', error);
+      alert('Failed to open WhatsApp. Please try again.');
+    }
+  };
 
   return (
     <section ref={sectionRef} className="py-20 bg-background">
@@ -91,9 +120,11 @@ const Contact = () => {
             className="text-4xl md:text-5xl font-bold mb-4 text-foreground"
           >
             Let's Build Something 
-            <span className="bg-gradient-primary bg-clip-text text-transparent"> <AuroraText speed={2} colors={["#38BDF8", "#6D28D9", "#38BDF8"]}>
-                                    Amazing
-                                  </AuroraText></span>
+            <span className="bg-gradient-primary bg-clip-text text-transparent">
+              <AuroraText speed={2} colors={["#38BDF8", "#6D28D9", "#38BDF8"]}>
+                Amazing
+              </AuroraText>
+            </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Ready to start your next project? Get in touch and let's discuss how we can help bring your vision to life.
@@ -103,84 +134,87 @@ const Contact = () => {
         <div ref={contentRef} className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Form */}
           <Card className="bg-card border-border">
-      <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-card-foreground">
-          Send us a message
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-card-foreground mb-2 block">
-                First Name
-              </label>
-              <Input
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                placeholder="Adhnan"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-card-foreground mb-2 block">
-                Last Name
-              </label>
-              <Input
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                placeholder="Ashkar"
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-card-foreground mb-2 block">
-              Email
-            </label>
-            <Input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="adnan@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-card-foreground mb-2 block">
-              Subject
-            </label>
-            <Input
-              name="subject"
-              value={formData.subject}
-              onChange={handleChange}
-              placeholder="Project inquiry"
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-card-foreground mb-2 block">
-              Message
-            </label>
-            <Textarea
-              name="message"
-              value={formData.message}
-              onChange={handleChange}
-              placeholder="Tell us about your project..."
-              className="min-h-[120px]"
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" size="lg">
-            <Send className="w-4 h-4 mr-2" />
-            Send via WhatsApp
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-semibold text-card-foreground">
+                Send us a message
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground mb-2 block">
+                      First Name
+                    </label>
+                    <Input
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleChange}
+                      placeholder="Adhnan"
+                      required
+                      autoComplete="given-name"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground mb-2 block">
+                      Last Name
+                    </label>
+                    <Input
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      placeholder="Ashkar"
+                      required
+                      autoComplete="family-name"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground mb-2 block">
+                    Email
+                  </label>
+                  <Input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="adnan@example.com"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground mb-2 block">
+                    Subject
+                  </label>
+                  <Input
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    placeholder="Project inquiry"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground mb-2 block">
+                    Message
+                  </label>
+                  <Textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    placeholder="Tell us about your project..."
+                    className="min-h-[120px]"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" size="lg">
+                  <Send className="w-4 h-4 mr-2" />
+                  Send via WhatsApp
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
 
           {/* Contact Info */}
           <div className="space-y-8">
@@ -237,9 +271,9 @@ const Contact = () => {
                 Book a free consultation call with our team
               </p>
               <a href="tel:+919995338177">
-              <Button variant="outline" className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                 Call
-              </Button>
+                <Button variant="outline" className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
+                  Call
+                </Button>
               </a>
             </div>
           </div>
