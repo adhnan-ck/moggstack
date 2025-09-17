@@ -29,12 +29,13 @@ const Contact = () => {
           scrollTrigger: {
             trigger: titleRef.current,
             start: "top 80%",
+            once: true
           }
         }
       );
 
       // Content animation
-      gsap.fromTo(contentRef.current.children,
+      gsap.fromTo([contentRef.current.children],
         { opacity: 0, y: 30 },
         {
           opacity: 1,
